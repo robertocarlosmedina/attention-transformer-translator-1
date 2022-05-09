@@ -1,16 +1,15 @@
 import torch
-import spacy
 from torchtext.data.metrics import bleu_score
-import sys
 
 
-def translate_sentence(model, sentence, cv_creole, english, device, max_length=50):
+
+def translate_sentence(spacy_cv, model, sentence, cv_creole, english, device, max_length=50):
     # Load cv_creole tokenizer
-    spacy_ger = spacy.load("de_core_news_lg")
+    # spacy_cv = spacy.load("pt_core_news_lg")
 
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
     if type(sentence) == str:
-        tokens = [token.text.lower() for token in spacy_ger(sentence)]
+        tokens = [token.text.lower() for token in spacy_cv(sentence)]
     else:
         tokens = [token.lower() for token in sentence]
 

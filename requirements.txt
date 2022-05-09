@@ -1,3 +1,5 @@
+pip install pygame
+pip install flask-restful
 pip install spacy
 pip install nltk
 python -m spacy download en_core_web_sm

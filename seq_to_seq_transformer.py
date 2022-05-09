@@ -25,10 +25,13 @@ class Sequence_to_Sequence_Transformer:
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
             exts=(".de", ".en"), fields=(self.cv_criole, self.english)
         )
-        # print(dir(train_data))
-        # print(dir(train_data.examples[0]))
-        # print(train_data.examples[0].src, train_data.examples[0].trg)
-        # # # print(train_data.filter_examples())
+        # print(self.english)
+        # print(dir(self.train_data))
+        # print(dir(self.train_data.examples[0]))
+        # print(self.train_data.examples[0].fromtree)
+        # print(self.train_data.examples[0].fromlist)
+        # print(self.train_data.examples[0].src, self.train_data.examples[0].trg)
+        # # print(train_data.filter_examples())
         # exit()
 
         # print(train_data.examples)
@@ -40,7 +43,7 @@ class Sequence_to_Sequence_Transformer:
         self.load_model = True
         self.save_model = True
         # Training hyperparameters
-        self.num_epochs = 10
+        self.num_epochs = 20
         self.learning_rate = 3e-4
         self.batch_size = 10
         # Model hyperparameters
@@ -59,6 +62,9 @@ class Sequence_to_Sequence_Transformer:
         self.step = 0
 
         self.starting_model_preparation()
+    
+    def check_if_there_is_a_model(self):
+        pass
 
     def tokenize_cv(self, text):
         return [tok.text for tok in self.spacy_cv.tokenizer(text)]
@@ -102,7 +108,7 @@ class Sequence_to_Sequence_Transformer:
             load_checkpoint(torch.load("my_checkpoint.pth.tar"), self.model, self.optimizer)
 
     def train_model(self):
-        sentence = "nhá nome ê Roberto."
+        sentence = "condê k no tem test d Análise Matemática?"
         for epoch in range(self.num_epochs):
             print(f"[Epoch {epoch} / {self.num_epochs}]")
 
@@ -115,7 +121,7 @@ class Sequence_to_Sequence_Transformer:
 
             self.model.eval()
             translated_sentence = translate_sentence(
-                self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
+                self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
             )
 
             print(f"Translated example sentence: \n {translated_sentence}")
@@ -169,7 +175,7 @@ class Sequence_to_Sequence_Transformer:
 
     def translate_sentence(self, sentence):
         translated_sentence_list = translate_sentence(
-            self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
+            self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
         )
         translated_sentence_str = []
         for word in translated_sentence_list:
