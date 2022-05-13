@@ -10,13 +10,13 @@ from seq_to_seq_transformer import Sequence_to_Sequence_Transformer as seq_to_se
 # args = vars(arg_pr.parse_args())
 
 
-test_list = ["onde k bô ta?", "mim ene sebê.", "M t fliz.",\
-             "M tite bei p xcolá", "m t xpêra.",\
-             "m tite andá.", "m t bei xpiá.", "sodad d bô.",\
-             "manera?", "nos terra.", "mim ê d Santo Antão", \
-             "M oia dos psoa.", "Tava t pensa n bô", "iss foi conde?", \
+test_list = ["ondê ke bô ta?", "mim ene sebê.", "M te fliz.",\
+             "M tite bei p xcolá", "m te xpêra.",\
+             "m tite andá.", "m te bei xpiá.", "sodad de bô.",\
+             "manera?", "nos terra.", "mim ê de Santo Antão", \
+             "M oia dos psoa.", "Tava te pensa n bô", "iss foi condê?", \
              "Talvez porkê nhe irmá ê advogada, agoh um kris també", \
-             "M tava gosta d oiob, intressant"]
+             "M tava gosta de oiob, intressant"]
 
 
 seq_to_seq_trans = seq_to_seq_trans()

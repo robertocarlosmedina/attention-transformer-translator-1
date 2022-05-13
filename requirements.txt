@@ -1,4 +1,5 @@
 pip install pygame
+pip install flask flask-cors
 pip install flask-restful
 pip install spacy
 pip install nltk

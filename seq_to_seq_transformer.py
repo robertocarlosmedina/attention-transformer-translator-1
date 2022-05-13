@@ -53,12 +53,12 @@ class Sequence_to_Sequence_Transformer:
         self.num_heads = 8
         self.num_encoder_layers = 3
         self.num_decoder_layers = 3
-        self.dropout = 0.10
+        self.dropout = 0.05
         self.max_len = 100
         self.forward_expansion = 4
         self.src_pad_idx = self.english.vocab.stoi["<pad>"]
         # Tensorboard to get nice loss plot
-        self.writer = SummaryWriter("runs/loss_plot")
+        self.writer = SummaryWriter()
         self.step = 0
 
         self.starting_model_preparation()
@@ -105,8 +105,10 @@ class Sequence_to_Sequence_Transformer:
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.pad_idx)
 
         if self.load_model:
-            load_checkpoint(torch.load("my_checkpoint.pth.tar"), self.model, self.optimizer)
-
+            try:
+                load_checkpoint(torch.load("my_checkpoint.pth.tar"), self.model, self.optimizer)
+            except:
+                pass
     def train_model(self):
         sentence = "condê k no tem test d Análise Matemática?"
         for epoch in range(self.num_epochs):
@@ -128,8 +130,7 @@ class Sequence_to_Sequence_Transformer:
             self.model.train()
             losses = []
 
-            for batch_idx, batch in enumerate(self.train_iterator):
-                print(f"NR: {batch_idx} OF:{len(self.train_iterator)}")
+            for batch_index, batch in enumerate(self.train_iterator):
                 # Get input and targets and get to cuda
                 inp_data = batch.src.to(self.device)
                 target = batch.trg.to(self.device)
@@ -150,7 +151,7 @@ class Sequence_to_Sequence_Transformer:
 
                 loss = self.criterion(output, target)
                 losses.append(loss.item())
-                # print(loss)
+                print(f"Epoch: {epoch}/{self.num_epochs}; Iteration: {batch_index}/{len(self.train_iterator)}; Loss: {loss.item()}")
 
                 # Back prop
                 loss.backward()
@@ -162,7 +163,7 @@ class Sequence_to_Sequence_Transformer:
                 self.optimizer.step()
 
                 # plot to tensorboard
-                # self.writer.add_scalar("Training loss", loss, global_step=self.step)
+                self.writer.add_scalar("Training loss", loss, global_step=self.step)
                 self.step += 1
 
             mean_loss = sum(losses) / len(losses)
