@@ -112,6 +112,7 @@ class Sequence_to_Sequence_Transformer:
 
     def train_model(self, test_senteces):
         # sentence = "condê k no tem test d Análise Matemática?"
+        train_acc, correct_train, target_count = 0, 0, 0
         for epoch in range(self.num_epochs):
             print(f"[Epoch {epoch} / {self.num_epochs}]")
 
@@ -154,7 +155,13 @@ class Sequence_to_Sequence_Transformer:
 
                 loss = self.criterion(output, target)
                 losses.append(loss.item())
-                print(f"Epoch: {epoch}/{self.num_epochs}; Iteration: {batch_index}/{len(self.train_iterator)}; Loss: {loss.item()}")
+
+                _, predicted = torch.max(output.data, 1)
+                target_count += target.size(0)
+                correct_train += (target == predicted).sum().item()
+                train_acc = (correct_train) / target_count
+
+                print(f"Epoch: {epoch}/{self.num_epochs}; Iteration: {batch_index}/{len(self.train_iterator)}; Loss: {loss.item():.4f}; Accuracy: {train_acc:.4f}")
 
                 # Back prop
                 loss.backward()
@@ -167,6 +174,10 @@ class Sequence_to_Sequence_Transformer:
 
                 # plot to tensorboard
                 self.writer.add_scalar("Training loss", loss, global_step=self.step)
+                self.writer.add_scalars(
+                    "Training metrics", {"Loss": loss, "Accuracy": train_acc}, global_step=self.step
+                )
+                self.writer.add_scalar("Training accuracy", train_acc, global_step=self.step)
                 self.step += 1
 
             mean_loss = sum(losses) / len(losses)

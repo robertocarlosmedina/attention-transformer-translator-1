@@ -10,7 +10,7 @@ from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer as seq_t
 #    default="terminal",
 #    help="Add the firts mode option to run this project")
 # args = vars(arg_pr.parse_args())
-mode = "api"
+mode = "train"
 
 test_list = [
     "ondê ke bô ta?", "mim ene sebê.", "M te fliz.",\
@@ -35,7 +35,9 @@ def run_translation_api() -> None:
 
 def execute_single_test() -> None:
     transformer = seq_to_seq_trans()
-    [print(f"{sentence}  =>  {transformer.translate_sentence(sentence)}") for sentence in test_list]
+    for i in range(5):
+        print(f"\nITERATION {i}:\n")
+        [print(f"{sentence}  =>  {transformer.translate_sentence(sentence)}") for sentence in test_list]
 
 
 def train_the_translation_model() -> None:
