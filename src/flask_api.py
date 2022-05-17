@@ -1,7 +1,7 @@
 from flask_restful import Api, Resource, reqparse
 from flask import Flask, jsonify
 from flask_cors import CORS, cross_origin
-from seq_to_seq_transformer import Sequence_to_Sequence_Transformer
+from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer
 
 app = Flask(__name__)
 CORS(app, support_credentials=True)
@@ -32,5 +32,3 @@ class Resfull_API:
     def start():
         api.add_resource(Translation, "/translate/<string:source>/<string:target>")
         app.run(debug=False)
-
-Resfull_API.start()

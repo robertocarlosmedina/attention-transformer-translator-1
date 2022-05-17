@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import spacy
 from nltk.tokenize.treebank import TreebankWordDetokenizer
-from utils import translate_sentence, bleu, save_checkpoint, load_checkpoint
+from src.utils import translate_sentence, bleu, save_checkpoint, load_checkpoint
 from torch.utils.tensorboard import SummaryWriter
 from torchtext.datasets import Multi30k
 from torchtext.data import Field, BucketIterator
@@ -43,7 +43,7 @@ class Sequence_to_Sequence_Transformer:
         self.load_model = True
         self.save_model = True
         # Training hyperparameters
-        self.num_epochs = 20
+        self.num_epochs = 50
         self.learning_rate = 3e-4
         self.batch_size = 10
         # Model hyperparameters
@@ -109,8 +109,9 @@ class Sequence_to_Sequence_Transformer:
                 load_checkpoint(torch.load("my_checkpoint.pth.tar"), self.model, self.optimizer)
             except:
                 pass
-    def train_model(self):
-        sentence = "condê k no tem test d Análise Matemática?"
+
+    def train_model(self, test_senteces):
+        # sentence = "condê k no tem test d Análise Matemática?"
         for epoch in range(self.num_epochs):
             print(f"[Epoch {epoch} / {self.num_epochs}]")
 
@@ -122,11 +123,13 @@ class Sequence_to_Sequence_Transformer:
                 save_checkpoint(checkpoint)
 
             self.model.eval()
-            translated_sentence = translate_sentence(
-                self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
-            )
+            print("\n--------------------------\nTEST SENTENCES\n--------------------------\n")
+            [print(f"""CV: {sentence}  =>  EN: {self.untokenize_translation(translate_sentence(
+                self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device,
+                max_length=50
+            ))}""") for sentence in test_senteces]
 
-            print(f"Translated example sentence: \n {translated_sentence}")
+            # print(f"Translated example sentence: \n {translated_sentence}")
             self.model.train()
             losses = []
 
@@ -173,15 +176,16 @@ class Sequence_to_Sequence_Transformer:
         # running on entire test data takes a while
         score = bleu(self.test_data[1:100], self.model, self.cv_criole, self.english, self.device)
         print(f"Bleu score {score * 100:.2f}")
+    
+    def untokenize_translation(self, translated_sentence_list):
+        translated_sentence_str = []
+        for word in translated_sentence_list:
+            if(word != "<eos>" and word != "<unk>"):
+                translated_sentence_str.append(word)
+        return TreebankWordDetokenizer().detokenize(translated_sentence_str)
 
     def translate_sentence(self, sentence):
         translated_sentence_list = translate_sentence(
             self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
         )
-        translated_sentence_str = []
-        for word in translated_sentence_list:
-            if(word != "<eos>" and word != "<unk>"):
-                translated_sentence_str.append(word)
-        translated_sentence_str = TreebankWordDetokenizer().detokenize(translated_sentence_str)
-        
-        return translated_sentence_str
+        return self.untokenize_translation(translated_sentence_list)
