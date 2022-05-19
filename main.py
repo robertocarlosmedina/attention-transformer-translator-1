@@ -10,7 +10,7 @@ from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer as seq_t
 #    default="terminal",
 #    help="Add the firts mode option to run this project")
 # args = vars(arg_pr.parse_args())
-mode = "train"
+mode = "gleu_score"
 
 test_list = [
     "ondê ke bô ta?", "mim ene sebê.", "M te fliz.",\
@@ -44,6 +44,25 @@ def train_the_translation_model() -> None:
     transformer = seq_to_seq_trans()
     transformer.train_model(test_list)
 
+
+def calculate_blue_score() -> None:
+    transformer = seq_to_seq_trans()
+    transformer.calculate_blue_score()
+
+
+def calculate_meteor_score() -> None:
+    transformer = seq_to_seq_trans()
+    transformer.calculate_meteor_score()
+
+def calculate_wer_score() -> None:
+    transformer = seq_to_seq_trans()
+    transformer.calculate_wer_score()
+
+def calculate_gleu_score() -> None:
+    transformer = seq_to_seq_trans()
+    transformer.calculate_gleu_score()
+
+
 if mode == "console":
     execute_console_translations()
 elif mode == "train":
@@ -52,3 +71,12 @@ elif mode == "test":
     execute_single_test()
 elif mode == "api":
     run_translation_api()
+elif mode == "blue_score":
+    calculate_blue_score()
+elif mode == "meteor_score":
+    calculate_meteor_score()
+elif mode == "wer_score":
+    calculate_wer_score()
+elif mode == "gleu_score":
+    calculate_gleu_score()
+    

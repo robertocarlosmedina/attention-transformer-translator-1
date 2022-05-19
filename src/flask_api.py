@@ -3,14 +3,15 @@ from flask import Flask, jsonify
 from flask_cors import CORS, cross_origin
 from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer
 
+
 app = Flask(__name__)
 CORS(app, support_credentials=True)
 api = Api(app)
 
-
 request_put_args = reqparse.RequestParser()
 request_put_args.add_argument("sentence", type=str, help="Sentece to be translated.")
 seq_to_seq_trans = Sequence_to_Sequence_Transformer()
+
 
 class Translation(Resource):
 
@@ -26,6 +27,7 @@ class Translation(Resource):
         # print(source_sentence, "  =>  " ,target_sentence)
         data = {"data": [{"translation": target_sentence,"valid": valid}]}
         return jsonify(data)
+
 
 class Resfull_API:
     @staticmethod

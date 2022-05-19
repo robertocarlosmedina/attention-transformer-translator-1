@@ -1,13 +1,15 @@
 import torch
+import spacy
 import torch.nn as nn
 import torch.optim as optim
-import spacy
-from nltk.tokenize.treebank import TreebankWordDetokenizer
-from src.utils import translate_sentence, bleu, save_checkpoint, load_checkpoint
-from torch.utils.tensorboard import SummaryWriter
+from textblob import TextBlob
+from transformer import Transformer
 from torchtext.datasets import Multi30k
 from torchtext.data import Field, BucketIterator
-from transformer import Transformer
+from torch.utils.tensorboard import SummaryWriter
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+from src.utils import translate_sentence, bleu, meteor, wer_score, gleu,\
+                        save_checkpoint, load_checkpoint
 
 
 class Sequence_to_Sequence_Transformer:
@@ -16,21 +18,23 @@ class Sequence_to_Sequence_Transformer:
     spacy_eng = spacy.load("en_core_web_sm")
 
     def __init__(self) -> None:
-        self.cv_criole = Field(tokenize=self.tokenize_cv, lower=True, init_token="<sos>", eos_token="<eos>")
+        self.cv_criole = Field(tokenize=self.tokenize_cv,
+                               lower=True, init_token="<sos>", eos_token="<eos>")
 
         self.english = Field(
             tokenize=self.tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
         )
 
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
-            exts=(".de", ".en"), fields=(self.cv_criole, self.english)
+            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test",
         )
         # print(self.english)
         # print(dir(self.train_data))
         # print(dir(self.train_data.examples[0]))
         # print(self.train_data.examples[0].fromtree)
         # print(self.train_data.examples[0].fromlist)
-        # print(self.train_data.examples[0].src, self.train_data.examples[0].trg)
+        # print(self.test_data.examples[0].src, self.test_data.examples[0].trg)
+        # print(self.valid_data.examples[0].src, self.valid_data.examples[0].trg)
         # # print(train_data.filter_examples())
         # exit()
 
@@ -39,7 +43,8 @@ class Sequence_to_Sequence_Transformer:
         self.cv_criole.build_vocab(self.train_data, max_size=10000, min_freq=2)
         self.english.build_vocab(self.train_data, max_size=10000, min_freq=2)
         # We're ready to define everything we need for training our Seq2Seq model
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
         self.load_model = True
         self.save_model = True
         # Training hyperparameters
@@ -62,7 +67,7 @@ class Sequence_to_Sequence_Transformer:
         self.step = 0
 
         self.starting_model_preparation()
-    
+
     def check_if_there_is_a_model(self):
         pass
 
@@ -71,7 +76,7 @@ class Sequence_to_Sequence_Transformer:
 
     def tokenize_eng(self, text):
         return [tok.text for tok in self.spacy_eng.tokenizer(text)]
-    
+
     def starting_model_preparation(self):
         self.train_iterator, self.valid_iterator, self.test_iterator = BucketIterator.splits(
             (self.train_data, self.valid_data, self.test_data),
@@ -95,7 +100,8 @@ class Sequence_to_Sequence_Transformer:
             self.device,
         ).to(self.device)
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(
+            self.model.parameters(), lr=self.learning_rate)
 
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, factor=0.1, patience=10, verbose=True
@@ -106,7 +112,8 @@ class Sequence_to_Sequence_Transformer:
 
         if self.load_model:
             try:
-                load_checkpoint(torch.load("my_checkpoint.pth.tar"), self.model, self.optimizer)
+                load_checkpoint(torch.load("my_checkpoint.pth.tar"),
+                                self.model, self.optimizer)
             except:
                 pass
 
@@ -124,7 +131,8 @@ class Sequence_to_Sequence_Transformer:
                 save_checkpoint(checkpoint)
 
             self.model.eval()
-            print("\n--------------------------\nTEST SENTENCES\n--------------------------\n")
+            print(
+                "\n--------------------------\nTEST SENTENCES\n--------------------------\n")
             [print(f"""CV: {sentence}  =>  EN: {self.untokenize_translation(translate_sentence(
                 self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device,
                 max_length=50
@@ -161,23 +169,27 @@ class Sequence_to_Sequence_Transformer:
                 correct_train += (target == predicted).sum().item()
                 train_acc = (correct_train) / target_count
 
-                print(f"Epoch: {epoch}/{self.num_epochs}; Iteration: {batch_index}/{len(self.train_iterator)}; Loss: {loss.item():.4f}; Accuracy: {train_acc:.4f}")
+                print(
+                    f"Epoch: {epoch}/{self.num_epochs}; Iteration: {batch_index}/{len(self.train_iterator)}; Loss: {loss.item():.4f}; Accuracy: {train_acc:.4f}")
 
                 # Back prop
                 loss.backward()
                 # Clip to avoid exploding gradient issues, makes sure grads are
                 # within a healthy range
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1)
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), max_norm=1)
 
                 # Gradient descent step
                 self.optimizer.step()
 
                 # plot to tensorboard
-                self.writer.add_scalar("Training loss", loss, global_step=self.step)
+                self.writer.add_scalar(
+                    "Training loss", loss, global_step=self.step)
                 self.writer.add_scalars(
                     "Training metrics", {"Loss": loss, "Accuracy": train_acc}, global_step=self.step
                 )
-                self.writer.add_scalar("Training accuracy", train_acc, global_step=self.step)
+                self.writer.add_scalar(
+                    "Training accuracy", train_acc, global_step=self.step)
                 self.step += 1
 
             mean_loss = sum(losses) / len(losses)
@@ -185,15 +197,34 @@ class Sequence_to_Sequence_Transformer:
 
     def calculate_blue_score(self):
         # running on entire test data takes a while
-        score = bleu(self.test_data[1:100], self.model, self.cv_criole, self.english, self.device)
-        print(f"Bleu score {score * 100:.2f}")
+        score = bleu(self.untokenize_translation, self.spacy_cv, self.test_data,
+                     self.model, self.cv_criole, self.english, self.device)
+        print(f"Bleu score: {score * 100:.2f}")
+
+    def calculate_meteor_score(self):
+        # running on entire test data takes a while
+        score = meteor(self.untokenize_translation, self.spacy_cv, self.test_data,
+                       self.model, self.cv_criole, self.english, self.device)
+        print(f"Meteor score: {score * 100:.2f}")
+
+    def calculate_wer_score(self):
+        score = wer_score(self.untokenize_translation, self.spacy_cv, self.test_data,
+                    self.model, self.cv_criole, self.english, self.device)
+        print(f"WER score: {score * 100:.2f}")
     
+    def calculate_gleu_score(self):
+        score = gleu(self.untokenize_translation, self.spacy_cv, self.test_data,
+                    self.model, self.cv_criole, self.english, self.device)
+        print(f"GLEU score: {score * 100:.2f}")
+
     def untokenize_translation(self, translated_sentence_list):
         translated_sentence_str = []
         for word in translated_sentence_list:
             if(word != "<eos>" and word != "<unk>"):
                 translated_sentence_str.append(word)
-        return TreebankWordDetokenizer().detokenize(translated_sentence_str)
+        translated_sentence = TreebankWordDetokenizer().detokenize(translated_sentence_str)
+        textBlb = TextBlob(translated_sentence)
+        return str(textBlb)
 
     def translate_sentence(self, sentence):
         translated_sentence_list = translate_sentence(
