@@ -45,7 +45,7 @@ class Sequence_to_Sequence_Transformer:
         # We're ready to define everything we need for training our Seq2Seq model
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
-        self.load_model = True
+        self.load_model = False
         self.save_model = True
         # Training hyperparameters
         self.num_epochs = 50
@@ -137,7 +137,7 @@ class Sequence_to_Sequence_Transformer:
                 self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device,
                 max_length=50
             ))}""") for sentence in test_senteces]
-
+            print("\n--------------------------------------------------------------------\n")
             # print(f"Translated example sentence: \n {translated_sentence}")
             self.model.train()
             losses = []

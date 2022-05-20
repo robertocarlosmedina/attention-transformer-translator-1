@@ -1,82 +1,68 @@
 # import os
-# import argparse
+import argparse
+
+arg_pr = argparse.ArgumentParser()
+arg_pr.add_argument(
+    "-a", "--action", nargs="+", required=True,
+    choices=[
+        "console", "train", "test", "api", "blue_score",
+        "meteor_score", "wer_score", "gleu_score"
+    ],
+    help="Add an action to run this project"
+)
+args = vars(arg_pr.parse_args())
+
+
 from src.flask_api import Resfull_API
 from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer as seq_to_seq_trans
 
-# arg_pr = argparse.ArgumentParser()
-# arg_pr.add_argument("-a", "--action", required=True,
-#    help="Add an action to run this project")
-# arg_pr.add_argument("-m", "--mode", required=False,
-#    default="terminal",
-#    help="Add the firts mode option to run this project")
-# args = vars(arg_pr.parse_args())
-mode = "gleu_score"
 
-test_list = [
-    "ondê ke bô ta?", "mim ene sebê.", "M te fliz.",\
-    "M tite bei p xcolá", "m te xpêra.",\
-    "m tite andá.", "m te bei xpiá.", "sodad de bô.",\
-    "manera?", "nos terra.", "mim ê de Santo Antão", \
-    "M oia dos psoa.", "Tava te pensa n bô", "iss foi condê?", \
-    "Talvez porkê nhe irmá ê advogada, agoh um kris també", \
-    "M tava gosta de oiob"
-]
+def get_test_data(start_index=0, end_index=10) -> list:
+    test_list = []
+    test_file_reader = open(".data/multi30k/test.cv", "r")
+    for text in test_file_reader.readlines()[start_index:end_index]:
+        test_list.append(text.strip())
+    return test_list
+
+
+transformer = seq_to_seq_trans()
+test_list = get_test_data()
+
 
 def execute_console_translations() -> None:
-    transformer = seq_to_seq_trans()
     while True:
         cv_sentence = str(input("CV phrase: "))
-        print(f"EN Translation: {transformer.translate_sentence(cv_sentence)}")
-
-
-def run_translation_api() -> None:
-    Resfull_API.start()
+        print(
+            f"EN Translation: {transformer.translate_sentence(cv_sentence)}")
 
 
 def execute_single_test() -> None:
-    transformer = seq_to_seq_trans()
     for i in range(5):
         print(f"\nITERATION {i}:\n")
-        [print(f"{sentence}  =>  {transformer.translate_sentence(sentence)}") for sentence in test_list]
+        [print(f"{sentence}  =>  {transformer.translate_sentence(sentence)}")
+         for sentence in test_list]
 
 
-def train_the_translation_model() -> None:
-    transformer = seq_to_seq_trans()
+def train_transformer_model() -> None:
     transformer.train_model(test_list)
-
-
-def calculate_blue_score() -> None:
-    transformer = seq_to_seq_trans()
-    transformer.calculate_blue_score()
-
-
-def calculate_meteor_score() -> None:
-    transformer = seq_to_seq_trans()
-    transformer.calculate_meteor_score()
-
-def calculate_wer_score() -> None:
-    transformer = seq_to_seq_trans()
-    transformer.calculate_wer_score()
-
-def calculate_gleu_score() -> None:
-    transformer = seq_to_seq_trans()
-    transformer.calculate_gleu_score()
-
-
-if mode == "console":
-    execute_console_translations()
-elif mode == "train":
-    train_the_translation_model()
-elif mode == "test":
-    execute_single_test()
-elif mode == "api":
-    run_translation_api()
-elif mode == "blue_score":
-    calculate_blue_score()
-elif mode == "meteor_score":
-    calculate_meteor_score()
-elif mode == "wer_score":
-    calculate_wer_score()
-elif mode == "gleu_score":
-    calculate_gleu_score()
     
+
+def execute_main_actions():
+
+    actions_dict = {
+        "console": execute_console_translations,
+        "train": train_transformer_model,
+        "test": execute_single_test,
+        "api": Resfull_API.start,
+        "blue_score": transformer.calculate_blue_score,
+        "meteor_score": transformer.calculate_meteor_score,
+        "wer_score": transformer.calculate_wer_score,
+        "gleu_score": transformer.calculate_gleu_score
+    }
+
+    for action in args["action"]:
+        actions_dict[action]()
+
+
+if __name__ == "__main__":
+    execute_main_actions()
