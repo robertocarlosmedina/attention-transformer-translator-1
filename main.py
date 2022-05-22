@@ -1,4 +1,3 @@
-# import os
 import argparse
 
 arg_pr = argparse.ArgumentParser()

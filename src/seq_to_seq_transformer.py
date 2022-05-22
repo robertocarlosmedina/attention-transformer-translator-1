@@ -24,28 +24,15 @@ class Sequence_to_Sequence_Transformer:
         self.english = Field(
             tokenize=self.tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
         )
-
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
-            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test",
+            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test"
         )
-        # print(self.english)
-        # print(dir(self.train_data))
-        # print(dir(self.train_data.examples[0]))
-        # print(self.train_data.examples[0].fromtree)
-        # print(self.train_data.examples[0].fromlist)
-        # print(self.test_data.examples[0].src, self.test_data.examples[0].trg)
-        # print(self.valid_data.examples[0].src, self.valid_data.examples[0].trg)
-        # # print(train_data.filter_examples())
-        # exit()
 
-        # print(train_data.examples)
-        # exit()
         self.cv_criole.build_vocab(self.train_data, max_size=10000, min_freq=2)
         self.english.build_vocab(self.train_data, max_size=10000, min_freq=2)
         # We're ready to define everything we need for training our Seq2Seq model
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
-        self.load_model = False
         self.save_model = True
         # Training hyperparameters
         self.num_epochs = 50
@@ -110,15 +97,13 @@ class Sequence_to_Sequence_Transformer:
         self.pad_idx = self.english.vocab.stoi["<pad>"]
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.pad_idx)
 
-        if self.load_model:
-            try:
-                load_checkpoint(torch.load("my_checkpoint.pth.tar"),
-                                self.model, self.optimizer)
-            except:
-                pass
+        try:
+            load_checkpoint(torch.load("my_checkpoint.pth.tar"),
+                            self.model, self.optimizer)
+        except:
+            pass
 
     def train_model(self, test_senteces):
-        # sentence = "condê k no tem test d Análise Matemática?"
         train_acc, correct_train, target_count = 0, 0, 0
         for epoch in range(self.num_epochs):
             print(f"[Epoch {epoch} / {self.num_epochs}]")
