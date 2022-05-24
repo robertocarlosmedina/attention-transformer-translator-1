@@ -1,3 +1,4 @@
+import os
 import argparse
 
 arg_pr = argparse.ArgumentParser()
@@ -18,7 +19,7 @@ from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer as seq_t
 
 def get_test_data(start_index=0, end_index=10) -> list:
     test_list = []
-    test_file_reader = open(".data/multi30k/test.cv", "r")
+    test_file_reader = open(".data/criolSet/test.cv", "r")
     for text in test_file_reader.readlines()[start_index:end_index]:
         test_list.append(text.strip())
     return test_list
@@ -29,17 +30,21 @@ test_list = get_test_data()
 
 
 def execute_console_translations() -> None:
+    os.system("clear")
+    print("\n                     CV Creole Translator ")
+    print("-------------------------------------------------------------")
     while True:
-        cv_sentence = str(input("CV phrase: "))
+        cv_sentence = str(input("  CV phrase: "))
         print(
-            f"EN Translation: {transformer.translate_sentence(cv_sentence)}")
+            f"  EN Translation: {transformer.translate_sentence(cv_sentence)}\n"
+        )
 
 
 def execute_single_test() -> None:
     for i in range(5):
         print(f"\nITERATION {i}:\n")
         [print(f"{sentence}  =>  {transformer.translate_sentence(sentence)}")
-         for sentence in test_list]
+            for sentence in test_list]
 
 
 def train_transformer_model() -> None:
@@ -47,7 +52,9 @@ def train_transformer_model() -> None:
     
 
 def execute_main_actions():
-
+    """
+        Function the execute the action according to the users need
+    """
     actions_dict = {
         "console": execute_console_translations,
         "train": train_transformer_model,
@@ -59,9 +66,8 @@ def execute_main_actions():
         "gleu_score": transformer.calculate_gleu_score
     }
 
-    for action in args["action"]:
-        actions_dict[action]()
-
+    [actions_dict[action]() for action in args["action"]]
+        
 
 if __name__ == "__main__":
     execute_main_actions()

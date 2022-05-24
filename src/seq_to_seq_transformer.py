@@ -27,8 +27,10 @@ class Sequence_to_Sequence_Transformer:
             tokenize=self.tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
         )
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
-            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test"
+            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test", path=".data/criolSet"
         )
+
+        # print(self.train_data.examples[122].src, self.train_data.examples[122].trg)
 
         self.cv_criole.build_vocab(self.train_data, max_size=10000, min_freq=2)
         self.english.build_vocab(self.train_data, max_size=10000, min_freq=2)
@@ -57,16 +59,23 @@ class Sequence_to_Sequence_Transformer:
         # Start the model configurations
         self.starting_model_preparation()
 
-    def check_if_there_is_a_model(self):
-        pass
 
     def tokenize_cv(self, text):
+        """
+            Exctract all the tokens from the CV sentences
+        """
         return [tok.text for tok in self.spacy_cv.tokenizer(text)]
 
     def tokenize_eng(self, text):
+        """
+            Exctract all the tokens from the EN sentences
+        """
         return [tok.text for tok in self.spacy_eng.tokenizer(text)]
 
     def starting_model_preparation(self):
+        """
+            Method to set the transformer configuration trainning hyperparameters
+        """
         self.train_iterator, self.valid_iterator, self.test_iterator = BucketIterator.splits(
             (self.train_data, self.valid_data, self.test_data),
             batch_size=self.batch_size,
@@ -184,28 +193,55 @@ class Sequence_to_Sequence_Transformer:
             self.scheduler.step(mean_loss)
 
     def calculate_blue_score(self):
+        """
+            BLEU (bilingual evaluation understudy) is an algorithm for evaluating 
+            the quality of text which has been machine-translated from one natural 
+            language to another.
+        """
         # running on entire test data takes a while
         score = bleu(self.untokenize_translation, self.spacy_cv, self.test_data,
                      self.model, self.cv_criole, self.english, self.device)
         print(f"Bleu score: {score * 100:.2f}")
 
     def calculate_meteor_score(self):
+        """
+            METEOR (Metric for Evaluation of Translation with Explicit ORdering) is 
+            a metric for the evaluation of machine translation output. The metric is 
+            based on the harmonic mean of unigram precision and recall, with recall 
+            weighted higher than precision.
+        """
         # running on entire test data takes a while
         score = meteor(self.untokenize_translation, self.spacy_cv, self.test_data,
                        self.model, self.cv_criole, self.english, self.device)
         print(f"Meteor score: {score * 100:.2f}")
 
     def calculate_wer_score(self):
+        """
+            Word error rate (WER) is a common metric of the performance of a speech 
+            recognition or machine translation system. The general difficulty of 
+            measuring performance lies in the fact that the recognized word sequence
+            can have a different length from the reference word sequence (supposedly 
+            the correct one).
+        """
         score = wer_score(self.untokenize_translation, self.spacy_cv, self.test_data,
                           self.model, self.cv_criole, self.english, self.device)
         print(f"WER score: {score * 100:.2f}")
 
     def calculate_gleu_score(self):
+        """
+            NLP evaluation metric used in Machine Translation tasks
+            Suitable for measuring sentence level similarity
+            Range: 0 (no match) to 1 (exact match)
+        """
         score = gleu(self.untokenize_translation, self.spacy_cv, self.test_data,
                      self.model, self.cv_criole, self.english, self.device)
         print(f"GLEU score: {score * 100:.2f}")
 
-    def untokenize_translation(self, translated_sentence_list):
+    def untokenize_translation(self, translated_sentence_list) -> str:
+        """
+            Method to untokenuze the pedicted translation.
+            Returning it on as an str.
+        """
         translated_sentence_str = []
         for word in translated_sentence_list:
             if(word != "<eos>" and word != "<unk>"):
@@ -214,8 +250,14 @@ class Sequence_to_Sequence_Transformer:
         textBlb = TextBlob(translated_sentence)
         return str(textBlb)
 
-    def translate_sentence(self, sentence):
+    def translate_sentence(self, sentence) -> str:
+        """
+            Method that performers the translation and return the prediction.
+        """
         translated_sentence_list = translate_sentence(
             self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
         )
-        return self.parser.parse(self.untokenize_translation(translated_sentence_list))["result"]
+        sentence = self.untokenize_translation(translated_sentence_list)
+        # Make the sentence gammer corrections
+        # sentence = self.parser.parse(sentence)["result"]
+        return sentence

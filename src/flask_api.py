@@ -1,6 +1,6 @@
 from flask_restful import Api, Resource, reqparse
 from flask import Flask, jsonify
-from flask_cors import CORS, cross_origin
+from flask_cors import CORS
 from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer
 
 
@@ -24,7 +24,6 @@ class Translation(Resource):
         if source_sentence:
             valid = True
         target_sentence = seq_to_seq_trans.translate_sentence(source_sentence)
-        # print(source_sentence, "  =>  " ,target_sentence)
         data = {"data": [{"translation": target_sentence,"valid": valid}]}
         return jsonify(data)
 

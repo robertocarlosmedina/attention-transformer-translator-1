@@ -80,3 +80,4 @@ class Transformer(nn.Module):
         )
         out = self.fc_out(out)
         return out
+        

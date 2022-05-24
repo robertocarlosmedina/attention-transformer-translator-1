@@ -4,13 +4,13 @@ from torchtext.data.metrics import bleu_score
 from nltk.translate.gleu_score import sentence_gleu
 from nltk.translate.meteor_score import meteor_score
 
+
 # If it's needed to dowload the nltk packages
 # nltk.download()
 
 
 def translate_sentence(spacy_cv, model, sentence, cv_creole, english, device, max_length=50):
     # Load cv_creole tokenizer
-
     # Create tokens using spacy and everything in lower case (which is what our vocab is)
     if type(sentence) == str:
         tokens = [token.text.lower() for token in spacy_cv(sentence)]
