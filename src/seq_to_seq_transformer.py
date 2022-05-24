@@ -3,19 +3,21 @@ import spacy
 import torch.nn as nn
 import torch.optim as optim
 from textblob import TextBlob
-from transformer import Transformer
+from src.transformer import Transformer
+from gingerit.gingerit import GingerIt
 from torchtext.datasets import Multi30k
 from torchtext.data import Field, BucketIterator
 from torch.utils.tensorboard import SummaryWriter
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 from src.utils import translate_sentence, bleu, meteor, wer_score, gleu,\
-                        save_checkpoint, load_checkpoint
+    save_checkpoint, load_checkpoint
 
 
 class Sequence_to_Sequence_Transformer:
 
     spacy_cv = spacy.load("pt_core_news_sm")
     spacy_eng = spacy.load("en_core_web_sm")
+    parser = GingerIt()
 
     def __init__(self) -> None:
         self.cv_criole = Field(tokenize=self.tokenize_cv,
@@ -52,7 +54,7 @@ class Sequence_to_Sequence_Transformer:
         # Tensorboard to get nice loss plot
         self.writer = SummaryWriter()
         self.step = 0
-
+        # Start the model configurations
         self.starting_model_preparation()
 
     def check_if_there_is_a_model(self):
@@ -122,7 +124,8 @@ class Sequence_to_Sequence_Transformer:
                 self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device,
                 max_length=50
             ))}""") for sentence in test_senteces]
-            print("\n--------------------------------------------------------------------\n")
+            print(
+                "\n--------------------------------------------------------------------\n")
             # print(f"Translated example sentence: \n {translated_sentence}")
             self.model.train()
             losses = []
@@ -194,12 +197,12 @@ class Sequence_to_Sequence_Transformer:
 
     def calculate_wer_score(self):
         score = wer_score(self.untokenize_translation, self.spacy_cv, self.test_data,
-                    self.model, self.cv_criole, self.english, self.device)
+                          self.model, self.cv_criole, self.english, self.device)
         print(f"WER score: {score * 100:.2f}")
-    
+
     def calculate_gleu_score(self):
         score = gleu(self.untokenize_translation, self.spacy_cv, self.test_data,
-                    self.model, self.cv_criole, self.english, self.device)
+                     self.model, self.cv_criole, self.english, self.device)
         print(f"GLEU score: {score * 100:.2f}")
 
     def untokenize_translation(self, translated_sentence_list):
@@ -215,4 +218,4 @@ class Sequence_to_Sequence_Transformer:
         translated_sentence_list = translate_sentence(
             self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
         )
-        return self.untokenize_translation(translated_sentence_list)
+        return self.parser.parse(self.untokenize_translation(translated_sentence_list))["result"]
