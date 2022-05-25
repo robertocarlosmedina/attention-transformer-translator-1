@@ -1,5 +1,8 @@
 import torch
+import numpy as np
 from jiwer import wer
+import seaborn as sns
+import matplotlib.pyplot as plt
 from torchtext.data.metrics import bleu_score
 from nltk.translate.gleu_score import sentence_gleu
 from nltk.translate.meteor_score import meteor_score
@@ -8,6 +11,10 @@ from nltk.translate.meteor_score import meteor_score
 # If it's needed to dowload the nltk packages
 # nltk.download()
 
+PAD_TOKEN = '<pad>'
+SOS_TOKEN = '<s>'
+EOS_TOKEN = '</s>'
+UNK_TOKEN = '<unk>'
 
 def translate_sentence(spacy_cv, model, sentence, cv_creole, english, device, max_length=50):
     # Load cv_creole tokenizer
@@ -26,6 +33,7 @@ def translate_sentence(spacy_cv, model, sentence, cv_creole, english, device, ma
 
     # Convert to Tensor
     sentence_tensor = torch.LongTensor(text_to_indices).unsqueeze(1).to(device)
+    attention_scores = torch.zeros(max_length, 1, len(text_to_indices)).to(device)
 
     outputs = [english.vocab.stoi["<sos>"]]
     for i in range(max_length):
@@ -119,10 +127,30 @@ def gleu(untokenize_translation, spacy_cv, data, model, cv_creole, english, devi
         prediction = prediction[:-1]  # remove <eos> token
 
         all_gleu_scores.append(
-            sentence_gleu([untokenize_translation(prediction)], untokenize_translation(trg))
+            sentence_gleu([untokenize_translation(prediction)],
+                          untokenize_translation(trg))
         )
 
     return sum(all_gleu_scores)/len(all_gleu_scores)
+
+
+def plot_attention_scores(source, prediction, attention):
+
+    if isinstance(source, str):
+        source = [token.lower for token in source.split(' ')] + ['</s>']
+    else:
+        source = [token.lower() for token in source] + ['</s>']
+
+    # cf_matrix = ConfusionMatrix(source, prediction)
+    # attention = attention[:len(target), :len(source)]
+
+    hmap = sns.heatmap(attention, annot=True, 
+            fmt='.2%', cmap='Blues')
+    hmap.yaxis.set_ticklabels(prediction, rotation=0, ha='right')
+    hmap.xaxis.set_ticklabels(source, rotation=90, ha='right')
+    hmap.xaxis.tick_top()
+    plt.ylabel('Output text [English]')
+    plt.xlabel('Input text [Cap-Verdian Creole]')
 
 
 def save_checkpoint(state, filename="my_checkpoint.pth.tar"):

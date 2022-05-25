@@ -1,14 +1,17 @@
-import torch
 import spacy
+
+import torch
 import torch.nn as nn
 import torch.optim as optim
-from textblob import TextBlob
-from src.transformer import Transformer
-from gingerit.gingerit import GingerIt
+from torch.utils.tensorboard import SummaryWriter
+
 from torchtext.datasets import Multi30k
 from torchtext.data import Field, BucketIterator
-from torch.utils.tensorboard import SummaryWriter
+
 from nltk.tokenize.treebank import TreebankWordDetokenizer
+
+from src.grammer_checker import Grammar_checker
+from src.transformer import Transformer
 from src.utils import translate_sentence, bleu, meteor, wer_score, gleu,\
     save_checkpoint, load_checkpoint
 
@@ -17,7 +20,7 @@ class Sequence_to_Sequence_Transformer:
 
     spacy_cv = spacy.load("pt_core_news_sm")
     spacy_eng = spacy.load("en_core_web_sm")
-    parser = GingerIt()
+    grammar = Grammar_checker()
 
     def __init__(self) -> None:
         self.cv_criole = Field(tokenize=self.tokenize_cv,
@@ -27,7 +30,8 @@ class Sequence_to_Sequence_Transformer:
             tokenize=self.tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
         )
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
-            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test", path=".data/criolSet"
+            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test",
+            path=".data/criolSet"
         )
 
         # print(self.train_data.examples[122].src, self.train_data.examples[122].trg)
@@ -58,7 +62,6 @@ class Sequence_to_Sequence_Transformer:
         self.step = 0
         # Start the model configurations
         self.starting_model_preparation()
-
 
     def tokenize_cv(self, text):
         """
@@ -247,8 +250,7 @@ class Sequence_to_Sequence_Transformer:
             if(word != "<eos>" and word != "<unk>"):
                 translated_sentence_str.append(word)
         translated_sentence = TreebankWordDetokenizer().detokenize(translated_sentence_str)
-        textBlb = TextBlob(translated_sentence)
-        return str(textBlb)
+        return self.grammar.check_sentence(translated_sentence)
 
     def translate_sentence(self, sentence) -> str:
         """
@@ -258,6 +260,4 @@ class Sequence_to_Sequence_Transformer:
             self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
         )
         sentence = self.untokenize_translation(translated_sentence_list)
-        # Make the sentence gammer corrections
-        # sentence = self.parser.parse(sentence)["result"]
         return sentence
