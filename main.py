@@ -28,7 +28,6 @@ def get_test_data(start_index=0, end_index=10) -> list:
     [en_test_list.append(text.strip()) for text in en_test_file_reader.readlines()
         [start_index:end_index]]
 
-
     return [(cv, en) for cv, en in zip(cv_test_list, en_test_list)]
 
 

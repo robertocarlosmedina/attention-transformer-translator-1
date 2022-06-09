@@ -30,7 +30,7 @@ class Sequence_to_Sequence_Transformer:
             tokenize=self.tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
         )
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
-            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test",
+            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test", 
             path=".data/criolSet"
         )
 
@@ -132,9 +132,8 @@ class Sequence_to_Sequence_Transformer:
             self.model.eval()
             print(
                 "\n--------------------------\nTEST SENTENCES\n--------------------------\n")
-            [print(f"""CV: {sentence}  =>  EN: {self.untokenize_translation(translate_sentence(
+            [print(f"""CV: {sentence}  =>  EN: {self.untokenized_translation(translate_sentence(
                 self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device,
-                max_length=50
             ))}""") for sentence in test_senteces]
             print(
                 "\n--------------------------------------------------------------------\n")
@@ -182,12 +181,7 @@ class Sequence_to_Sequence_Transformer:
                 # Gradient descent step
                 self.optimizer.step()
 
-                # plot to tensorboard
-                self.writer.add_scalar(
-                    "Training loss", loss, global_step=self.step)
-                self.writer.add_scalars(
-                    "Training metrics", {"Loss": loss, "Accuracy": train_acc}, global_step=self.step
-                )
+                 
                 self.writer.add_scalar(
                     "Training accuracy", train_acc, global_step=self.step)
                 self.step += 1
@@ -202,7 +196,7 @@ class Sequence_to_Sequence_Transformer:
             language to another.
         """
         # running on entire test data takes a while
-        score = bleu(self.untokenize_translation, self.spacy_cv, self.test_data,
+        score = bleu(self.untokenized_translation, self.spacy_cv, self.test_data,
                      self.model, self.cv_criole, self.english, self.device)
         print(f"Bleu score: {score * 100:.2f}")
 
@@ -214,7 +208,7 @@ class Sequence_to_Sequence_Transformer:
             weighted higher than precision.
         """
         # running on entire test data takes a while
-        score = meteor(self.untokenize_translation, self.spacy_cv, self.test_data,
+        score = meteor(self.untokenized_translation, self.spacy_cv, self.test_data,
                        self.model, self.cv_criole, self.english, self.device)
         print(f"Meteor score: {score * 100:.2f}")
 
@@ -226,7 +220,7 @@ class Sequence_to_Sequence_Transformer:
             can have a different length from the reference word sequence (supposedly 
             the correct one).
         """
-        score = wer_score(self.untokenize_translation, self.spacy_cv, self.test_data,
+        score = wer_score(self.untokenized_translation, self.spacy_cv, self.test_data,
                           self.model, self.cv_criole, self.english, self.device)
         print(f"WER score: {score * 100:.2f}")
 
@@ -236,11 +230,11 @@ class Sequence_to_Sequence_Transformer:
             Suitable for measuring sentence level similarity
             Range: 0 (no match) to 1 (exact match)
         """
-        score = gleu(self.untokenize_translation, self.spacy_cv, self.test_data,
+        score = gleu(self.untokenized_translation, self.spacy_cv, self.test_data,
                      self.model, self.cv_criole, self.english, self.device)
         print(f"GLEU score: {score * 100:.2f}")
 
-    def untokenize_translation(self, translated_sentence_list) -> str:
+    def untokenized_translation(self, translated_sentence_list) -> str:
         """
             Method to untokenuze the pedicted translation.
             Returning it on as an str.
@@ -259,5 +253,5 @@ class Sequence_to_Sequence_Transformer:
         translated_sentence_list = translate_sentence(
             self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
         )
-        sentence = self.untokenize_translation(translated_sentence_list)
+        sentence = self.untokenized_translation(translated_sentence_list)
         return sentence
