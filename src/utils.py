@@ -153,7 +153,7 @@ def plot_attention_scores(source, prediction, attention):
     plt.xlabel('Input text [Cap-Verdian Creole]')
 
 
-def save_checkpoint(state, filename="my_checkpoint.pth.tar"):
+def save_checkpoint(state, filename="checkpoints/my_checkpoint.pth.tar"):
     print("=> Saving checkpoint")
     torch.save(state, filename)
 

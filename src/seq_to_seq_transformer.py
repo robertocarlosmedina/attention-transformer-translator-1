@@ -112,7 +112,7 @@ class Sequence_to_Sequence_Transformer:
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.pad_idx)
 
         try:
-            load_checkpoint(torch.load("my_checkpoint.pth.tar"),
+            load_checkpoint(torch.load("checkpoints/my_checkpoint.pth.tar"),
                             self.model, self.optimizer)
         except:
             pass
