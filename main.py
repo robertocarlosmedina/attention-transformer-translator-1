@@ -7,8 +7,8 @@ arg_pr = argparse.ArgumentParser()
 arg_pr.add_argument(
     "-a", "--action", nargs="+", required=True,
     choices=[
-        "console", "train", "test", "api", "blue_score",
-        "meteor_score", "wer_score", "gleu_score"
+        "console", "train", "test_model", "flask_api", "blue_score",
+        "meteor_score", "count_parameters", "ter_score"
     ],
     help="Add an action to run this project"
 )
@@ -53,23 +53,19 @@ def execute_single_test() -> None:
             for sentence in test_list[0]]
 
 
-def train_transformer_model() -> None:
-    transformer.train_model(test_list[0])
-
-
 def execute_main_actions():
     """
         Function the execute the action according to the users need
     """
     actions_dict = {
         "console": execute_console_translations,
-        "train": train_transformer_model,
+        "train": transformer.train_model,
         "test": execute_single_test,
-        "api": Resfull_API.start,
+        "flask_api": Resfull_API.start,
         "blue_score": transformer.calculate_blue_score,
         "meteor_score": transformer.calculate_meteor_score,
-        "wer_score": transformer.calculate_wer_score,
-        "gleu_score": transformer.calculate_gleu_score
+        "count_parameters": transformer.count_hyperparameters,
+        "ter_score": transformer.calculate_ter_score
     }
 
     [actions_dict[action]() for action in args["action"]]
