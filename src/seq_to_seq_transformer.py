@@ -1,5 +1,12 @@
 import math
+from nltk.tokenize.treebank import TreebankWordDetokenizer
 import spacy
+
+from src.grammar_checker import Grammar_checker
+from src.transformer import Transformer
+from src.utils import epoch_time, translate_sentence, bleu, meteor,\
+    save_checkpoint, load_checkpoint, ter, count_parameters,\
+    epoch_time
 
 import time
 
@@ -10,14 +17,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from torchtext.datasets import Multi30k
 from torchtext.data import Field, BucketIterator
-
-from nltk.tokenize.treebank import TreebankWordDetokenizer
-
-from src.grammer_checker import Grammar_checker
-from src.transformer import Transformer
-from src.utils import epoch_time, translate_sentence, bleu, meteor,\
-    save_checkpoint, load_checkpoint, ter, count_parameters,\
-    epoch_time
 
 
 class Sequence_to_Sequence_Transformer:

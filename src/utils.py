@@ -1,11 +1,8 @@
-import torch
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from torchtext.data.metrics import bleu_score
 from nltk.translate.meteor_score import meteor_score
-
 import pyter
+
+import torch
+from torchtext.data.metrics import bleu_score
 
 
 # If it's needed to dowload the nltk packages
