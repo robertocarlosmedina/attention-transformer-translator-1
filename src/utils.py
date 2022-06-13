@@ -123,7 +123,7 @@ def ter(spacy_cv, test_data, model, cv_creole, english, device):
         src = vars(example)["src"]
         trg = vars(example)["trg"]
         prediction = translate_sentence(
-            spacy_cv, model, src, cv_creole, english, device)
+            spacy_cv, model, src, cv_creole, english, device)[:-1]
         print(f'  Source (cv): {" ".join(src)}')
         print(f'  Target (en): {" ".join(trg)}')
         print(f'  Predictions (en): {" ".join(prediction)}\n')
