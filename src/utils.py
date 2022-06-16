@@ -1,3 +1,4 @@
+from termcolor import colored
 from nltk.translate.meteor_score import meteor_score
 import pyter
 
@@ -58,6 +59,10 @@ def translate_sentence(spacy_cv, model, sentence, cv_creole, english, device, ma
     return translated_sentence[1:]
 
 
+def remove_special_notation(sentence: list):
+    return [token for token in sentence if token not in ["<unk>", "<eos>", "<sos>"]]
+
+
 def bleu(spacy_cv, data, model, cv_creole, english, device):
     targets = []
     outputs = []
@@ -72,12 +77,14 @@ def bleu(spacy_cv, data, model, cv_creole, english, device):
 
             prediction = translate_sentence(
                 spacy_cv, model, src, cv_creole, english, device)
-            predictions.append(prediction[:-1]) # remove <eos> token
+            prediction = remove_special_notation(prediction)
+            predictions.append(prediction)
 
         print(f'  Source (cv): {" ".join(src)}')
-        print(f'  Target (en): {trg}')
-        print(f'  Predictions (en):')
-        [print(f'      - {prediction}') for prediction in predictions]
+        print(colored(f'  Target (en): {" ".join(trg)}', attrs=['bold']))
+        print(colored(f'  Predictions (en):', 'blue', attrs=['bold']))
+        [print(colored(f'      - {" ".join(prediction)}', 'blue', attrs=['bold'])) 
+            for prediction in predictions]
         print("\n")
 
         targets.append(trg)
@@ -86,7 +93,7 @@ def bleu(spacy_cv, data, model, cv_creole, english, device):
     return bleu_score(targets, outputs)
 
 
-def meteor(untokenize_translation, spacy_cv, data, model, cv_creole, english, device):
+def meteor(spacy_cv, data, model, cv_creole, english, device):
     all_meteor_scores = []
 
     for example in data:
@@ -97,16 +104,16 @@ def meteor(untokenize_translation, spacy_cv, data, model, cv_creole, english, de
         for _ in range(4):
             prediction = translate_sentence(
                 spacy_cv, model, src, cv_creole, english, device)
-            prediction = prediction[:-1]  # remove <eos> token
-            predictions.append(untokenize_translation(prediction))
+            prediction = remove_special_notation(prediction)
+            predictions.append(" ".join(prediction))
 
         all_meteor_scores.append(meteor_score(
-            predictions, untokenize_translation(trg)
+            predictions, " ".join(trg)
         ))
         print(f'  Source (cv): {" ".join(src)}')
-        print(f'  Target (en): {untokenize_translation(trg)}')
-        print(f'  Predictions (en): ')
-        [print(f'      - {prediction}') for prediction in predictions]
+        print(colored(f'  Target (en): {" ".join(trg)}', attrs=['bold']))
+        print(colored(f'  Predictions (en):', 'blue', attrs=['bold']))
+        [print(colored(f'      - {prediction}', 'blue', attrs=['bold'])) for prediction in predictions]
         print("\n")
 
     return sum(all_meteor_scores)/len(all_meteor_scores)
@@ -124,23 +131,20 @@ def ter(spacy_cv, test_data, model, cv_creole, english, device):
         trg = vars(example)["trg"]
         prediction = translate_sentence(
             spacy_cv, model, src, cv_creole, english, device)[:-1]
+        prediction = remove_special_notation(prediction)
         print(f'  Source (cv): {" ".join(src)}')
-        print(f'  Target (en): {" ".join(trg)}')
-        print(f'  Predictions (en): {" ".join(prediction)}\n')
+        print(colored(f'  Target (en): {" ".join(trg)}', attrs=['bold']))
+        print(colored(f'  Prediction (en): {" ".join(prediction)}\n', 'blue', attrs=['bold']))
         all_translation_ter += pyter.ter(prediction, trg)
     return all_translation_ter/len(test_data)
-
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
     
 
 def save_checkpoint(state, filename="checkpoints/my_checkpoint.pth.tar"):
-    print("=> Saving checkpoint")
+    print(colored("=> Saving checkpoint", 'cyan'))
     torch.save(state, filename)
 
 
 def load_checkpoint(checkpoint, model, optimizer):
-    print("=> Loading checkpoint")
+    print(colored("=> Loading checkpoint", "cyan"))
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])

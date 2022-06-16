@@ -1,12 +1,13 @@
+from termcolor import colored
 import math
 from nltk.tokenize.treebank import TreebankWordDetokenizer
 import spacy
+import os
 
 from src.grammar_checker import Grammar_checker
 from src.transformer import Transformer
 from src.utils import epoch_time, translate_sentence, bleu, meteor,\
-    save_checkpoint, load_checkpoint, ter, count_parameters,\
-    epoch_time
+    save_checkpoint, load_checkpoint, ter, epoch_time
 
 import time
 
@@ -118,8 +119,11 @@ class Sequence_to_Sequence_Transformer:
             load_checkpoint(torch.load("checkpoints/my_checkpoint.pth.tar"),
                             self.model, self.optimizer)
         except:
-            pass
+            print(colored("=> No checkpoint to Load", "red"))
     
+    def get_test_data(self) -> list:
+        return [(test.src, test.trg) for test in self.test_data.examples[0:20]]
+
     def evaluate(self):
         self.model.eval()
 
@@ -286,6 +290,16 @@ class Sequence_to_Sequence_Transformer:
                 train_accuracy, valid_loss, valid_accuracy
             )            
 
+    def console_model_test(self) -> None:
+        os.system("clear")
+        print("\n                     CV Creole Translator ")
+        print("-------------------------------------------------------------\n")
+        while True:
+            Sentence = str(input(f'  Sentence (cv): '))
+            translation = self.translate_sentence(Sentence)
+
+            print(colored(f'  Predicted (en): {translation}\n', 'blue', attrs=['bold']))
+
     def calculate_blue_score(self):
         """
             BLEU (bilingual evaluation understudy) is an algorithm for evaluating 
@@ -295,7 +309,7 @@ class Sequence_to_Sequence_Transformer:
         # running on entire test data takes a while
         score = bleu(self.spacy_cv, self.test_data,
                      self.model, self.cv_criole, self.english, self.device)
-        print(f"Bleu score: {score * 100:.2f}")
+        print(colored(f"==> TER score: {score * 100:.2f}\n", 'blue'))
 
     def calculate_meteor_score(self):
         """
@@ -305,9 +319,9 @@ class Sequence_to_Sequence_Transformer:
             weighted higher than precision.
         """
         # running on entire test data takes a while
-        score = meteor(self.untokenized_translation, self.spacy_cv, self.test_data,
+        score = meteor(self.spacy_cv, self.test_data,
                        self.model, self.cv_criole, self.english, self.device)
-        print(f"Meteor score: {score * 100:.2f}")
+        print(colored(f"==> Meteor score: {score * 100:.2f}\n", 'blue'))
     
     def calculate_ter_score(self):
         """
@@ -317,13 +331,13 @@ class Sequence_to_Sequence_Transformer:
         """
         score = ter(self.spacy_cv, self.test_data,
                      self.model, self.cv_criole, self.english, self.device)
-        print(f"TER score: {score * 100:.2f}")
+        print(colored(f"==> TER score: {score * 100:.2f}\n", 'blue'))
     
     def count_hyperparameters(self) -> None:
-        print(
-            f'\nThe model has {count_parameters(self.model):,} trainable parameters')
+        total_parameters =  sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        print(colored(f'\n==> The model has {total_parameters:,} trainable parameters\n', 'blue'))
 
-    def untokenized_translation(self, translated_sentence_list) -> str:
+    def untokenize_sentence(self, translated_sentence_list) -> str:
         """
             Method to untokenuze the pedicted translation.
             Returning it on as an str.
@@ -342,5 +356,20 @@ class Sequence_to_Sequence_Transformer:
         translated_sentence_list = translate_sentence(
             self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
         )
-        sentence = self.untokenized_translation(translated_sentence_list)
+        sentence = self.untokenize_sentence(translated_sentence_list)
         return sentence
+
+    def test_model(self) -> None:
+        test_data = self.get_test_data()
+        os.system("clear")
+        print("\n                  CV Creole Translator Test ")
+        print("-------------------------------------------------------------\n")
+        for data_tuple in test_data:
+            src, trg = " ".join(
+                data_tuple[0]), " ".join(data_tuple[1])
+            translation = self.translate_sentence(src)
+            print(f'  Source (cv): {src}')
+            print(colored(f'  Target (en): {trg}', attrs=['bold']))
+            print(
+                colored(f'  Predicted (en): {translation}\n', 'blue', attrs=['bold'])
+            )
