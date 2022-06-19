@@ -1,3 +1,4 @@
+from tqdm import tqdm
 from termcolor import colored
 import math
 from nltk.tokenize.treebank import TreebankWordDetokenizer
@@ -7,7 +8,7 @@ import os
 from src.grammar_checker import Grammar_checker
 from src.transformer import Transformer
 from src.utils import epoch_time, translate_sentence, bleu, meteor,\
-    save_checkpoint, load_checkpoint, ter, epoch_time
+    save_checkpoint, load_checkpoint, ter, epoch_time, remove_special_notation
 
 import time
 
@@ -22,26 +23,33 @@ from torchtext.data import Field, BucketIterator
 
 class Sequence_to_Sequence_Transformer:
 
-    spacy_cv = spacy.load("pt_core_news_sm")
-    spacy_eng = spacy.load("en_core_web_sm")
+    spacy_models = {
+        "en": spacy.load("en_core_web_sm"),
+        "pt": spacy.load("pt_core_news_sm"),
+        "cv": spacy.load("pt_core_news_sm"),
+    }
     grammar = Grammar_checker()
 
-    def __init__(self) -> None:
-        self.cv_criole = Field(tokenize=self.tokenize_cv,
+    def __init__(self, source_languague, target_languague) -> None:
+        self.source_languague, self.target_languague = source_languague, target_languague
+        print(source_languague, target_languague)
+        self.source = Field(tokenize=self.tokenize_src,
                                lower=True, init_token="<sos>", eos_token="<eos>")
 
-        self.english = Field(
-            tokenize=self.tokenize_eng, lower=True, init_token="<sos>", eos_token="<eos>"
+        self.target = Field(
+            tokenize=self.tokenize_trg, lower=True, init_token="<sos>", eos_token="<eos>"
         )
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
-            exts=(".cv", ".en"), fields=(self.cv_criole, self.english), test="test", 
+            exts=(f".{self.source_languague}", f".{target_languague}"), 
+            fields=(self.source, self.target), test="test", 
             path=".data/criolSet"
         )
 
         # print(self.train_data.examples[122].src, self.train_data.examples[122].trg)
+        # exit()
 
-        self.cv_criole.build_vocab(self.train_data, max_size=10000, min_freq=2)
-        self.english.build_vocab(self.train_data, max_size=10000, min_freq=2)
+        self.source.build_vocab(self.train_data, max_size=10000, min_freq=2)
+        self.target.build_vocab(self.train_data, max_size=10000, min_freq=2)
         # We're ready to define everything we need for training our Seq2Seq model
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
@@ -51,8 +59,8 @@ class Sequence_to_Sequence_Transformer:
         self.learning_rate = 3e-4
         self.batch_size = 10
         # Model hyperparameters
-        self.src_vocab_size = len(self.cv_criole.vocab)
-        self.trg_vocab_size = len(self.english.vocab)
+        self.src_vocab_size = len(self.source.vocab)
+        self.trg_vocab_size = len(self.target.vocab)
         self.embedding_size = 512
         self.num_heads = 8
         self.num_encoder_layers = 3
@@ -60,24 +68,24 @@ class Sequence_to_Sequence_Transformer:
         self.dropout = 0.05
         self.max_len = 100
         self.forward_expansion = 4
-        self.src_pad_idx = self.english.vocab.stoi["<pad>"]
+        self.src_pad_idx = self.target.vocab.stoi["<pad>"]
         # Tensorboard to get nice loss plot
         self.writer = SummaryWriter()
         self.step = 0
         # Start the model configurations
         self.starting_model_preparation()
 
-    def tokenize_cv(self, text):
+    def tokenize_src(self, text):
         """
             Exctract all the tokens from the CV sentences
         """
-        return [tok.text for tok in self.spacy_cv.tokenizer(text)]
+        return [tok.text for tok in self.spacy_models[self.source_languague].tokenizer(text)]
 
-    def tokenize_eng(self, text):
+    def tokenize_trg(self, text):
         """
             Exctract all the tokens from the EN sentences
         """
-        return [tok.text for tok in self.spacy_eng.tokenizer(text)]
+        return [tok.text for tok in self.spacy_models[self.target_languague].tokenizer(text)]
 
     def starting_model_preparation(self):
         """
@@ -112,19 +120,23 @@ class Sequence_to_Sequence_Transformer:
             self.optimizer, factor=0.1, patience=10, verbose=True
         )
 
-        self.pad_idx = self.english.vocab.stoi["<pad>"]
+        self.pad_idx = self.target.vocab.stoi["<pad>"]
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.pad_idx)
 
         try:
-            load_checkpoint(torch.load("checkpoints/my_checkpoint.pth.tar"),
-                            self.model, self.optimizer)
+            load_checkpoint(
+                torch.load(
+                    f"checkpoints/transformer1-{self.source_languague}-{self.target_languague}.pth.tar"
+                ),
+                self.model, self.optimizer
+            )
         except:
             print(colored("=> No checkpoint to Load", "red"))
     
     def get_test_data(self) -> list:
         return [(test.src, test.trg) for test in self.test_data.examples[0:20]]
 
-    def evaluate(self):
+    def evaluate(self, epoch, progress_bar):
         self.model.eval()
 
         epoch_loss = 0
@@ -160,9 +172,14 @@ class Sequence_to_Sequence_Transformer:
 
                 epoch_loss += loss.item()
 
+                progress_bar.set_postfix(
+                    epoch=f" {epoch}, val loss= {round(epoch_loss / (i + 1), 4)}, val accu: {train_acc / (i + 1):.4f}", 
+                    refresh=True)
+                progress_bar.update()
+
         return epoch_loss / len_valid_iterator, train_acc / len_valid_iterator
 
-    def train(self):
+    def train(self, epoch, progress_bar):
         self.model.eval()
         self.model.train()
 
@@ -172,7 +189,6 @@ class Sequence_to_Sequence_Transformer:
         len_iterator = len(self.train_iterator)
 
         for batch_index, batch in enumerate(self.train_iterator):
-            print(f" Training Iteration: {batch_index+1:04}/{len_iterator}")
             # Get input and targets and get to cuda
             inp_data = batch.src.to(self.device)
             target = batch.trg.to(self.device)
@@ -204,6 +220,10 @@ class Sequence_to_Sequence_Transformer:
             # Gradient descent step
             self.optimizer.step()
             self.step += 1
+            progress_bar.set_postfix(
+                epoch=f" {epoch}, train loss= {round(epoch_loss / (batch_index + 1), 4)}, train accu: {train_acc / (batch_index + 1):.4f}", 
+                refresh=True)
+            progress_bar.update()
             
         mean_loss = sum(losses) / len(losses)
         self.scheduler.step(mean_loss)
@@ -225,37 +245,41 @@ class Sequence_to_Sequence_Transformer:
         """
         # All stand alone metrics
         self.writer.add_scalar(
-            "Training Loss", train_loss, global_step=epoch)
+            f"Training Loss ({self.source_languague}-{self.target_languague})", 
+            train_loss, global_step=epoch)
         self.writer.add_scalar(
-            "Training Accuracy", train_accuracy, global_step=epoch)
+            f"Training Accuracy ({self.source_languague}-{self.target_languague})", 
+            train_accuracy, global_step=epoch)
         self.writer.add_scalar(
-            "Validation Loss", valid_loss, global_step=epoch)
+            f"Validation Loss ({self.source_languague}-{self.target_languague})", 
+            valid_loss, global_step=epoch)
         self.writer.add_scalar(
-            "Validation Accuracy", valid_accuracy, global_step=epoch)
+            f"Validation Accuracy ({self.source_languague}-{self.target_languague})", 
+            valid_accuracy, global_step=epoch)
         
         # Mixing Train Metrics
         self.writer.add_scalars(
-            "Training Metrics (Train Loss / Train Accurary)", {
-                "Train Loss": train_loss, "Train Accurary": train_accuracy},
+            f"Training Loss & Accurary ({self.source_languague}-{self.target_languague})", 
+            {"Train Loss": train_loss, "Train Accurary": train_accuracy},
             global_step=epoch
         )
 
         # Mixing Validation Metrics
         self.writer.add_scalars(
-            "Training Metrics (Validation Loss / Validation Accurary)", {
-                "Validation Loss": valid_loss, "Validation Accuracy": valid_accuracy},
+            f"Validation Loss & Accurary  ({self.source_languague}-{self.target_languague})", 
+            {"Validation Loss": valid_loss, "Validation Accuracy": valid_accuracy},
             global_step=epoch
         )
         
         # Mixing Train and Validation Metrics
         self.writer.add_scalars(
-            "Training Metrics (Train Loss / Validation Loss)", {
-                "Train Loss": train_loss, "Validation Loss": valid_loss},
+            f"Train Loss & Validation Loss ({self.source_languague}-{self.target_languague})", 
+            {"Train Loss": train_loss, "Validation Loss": valid_loss},
             global_step=epoch
         )
         self.writer.add_scalars(
-            "Training Metrics (Train Accurary / Validation Accuracy)", {
-                "Train Accurary": train_accuracy, "Validation Accuracy": valid_accuracy},
+            f"Train Accurary & Validation Accuracy ({self.source_languague}-{self.target_languague})",
+            {"Train Accurary": train_accuracy, "Validation Accuracy": valid_accuracy},
             global_step=epoch
         )
 
@@ -264,11 +288,15 @@ class Sequence_to_Sequence_Transformer:
         best_valid_loss = float('inf')
 
         for epoch in range(self.num_epochs):
+            progress_bar = tqdm(
+                total=len(self.train_iterator)+len(self.valid_iterator), 
+                bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}', unit=' batches', ncols=200
+            )
 
             start_time = time.time()
 
-            train_loss, train_accuracy = self.train()
-            valid_loss, valid_accuracy = self.evaluate()
+            train_loss, train_accuracy = self.train(epoch + 1, progress_bar)
+            valid_loss, valid_accuracy = self.evaluate(epoch + 1, progress_bar)
 
             end_time = time.time()
 
@@ -280,13 +308,16 @@ class Sequence_to_Sequence_Transformer:
                     "state_dict": self.model.state_dict(),
                     "optimizer": self.optimizer.state_dict(),
                 }
-                save_checkpoint(checkpoint, "checkpoints/my_checkpoint.pth.tar")
+                save_checkpoint(
+                    checkpoint, 
+                    f"checkpoints/transformer1-{self.source_languague}-{self.target_languague}.pth.tar"
+                )
             self.show_train_metrics(
-                epoch, f"{epoch_mins}m {epoch_secs}s", train_loss,
+                epoch + 1, f"{epoch_mins}m {epoch_secs}s", train_loss,
                 train_accuracy, valid_loss, valid_accuracy
             )
             self.save_train_metrics(
-                epoch, train_loss,
+                epoch + 1, train_loss,
                 train_accuracy, valid_loss, valid_accuracy
             )            
 
@@ -295,10 +326,10 @@ class Sequence_to_Sequence_Transformer:
         print("\n                     CV Creole Translator ")
         print("-------------------------------------------------------------\n")
         while True:
-            Sentence = str(input(f'  Sentence (cv): '))
+            Sentence = str(input(f'  Sentence ({self.source_languague}): '))
             translation = self.translate_sentence(Sentence)
 
-            print(colored(f'  Predicted (en): {translation}\n', 'blue', attrs=['bold']))
+            print(colored(f'  Predicted ({self.target_languague}): {translation}\n', 'blue', attrs=['bold']))
 
     def calculate_blue_score(self):
         """
@@ -307,8 +338,8 @@ class Sequence_to_Sequence_Transformer:
             language to another.
         """
         # running on entire test data takes a while
-        score = bleu(self.spacy_cv, self.test_data,
-                     self.model, self.cv_criole, self.english, self.device)
+        score = bleu(self.spacy_models[self.source_languague], self.test_data,
+                     self.model, self.source, self.target, self.device)
         print(colored(f"==> TER score: {score * 100:.2f}\n", 'blue'))
 
     def calculate_meteor_score(self):
@@ -319,8 +350,8 @@ class Sequence_to_Sequence_Transformer:
             weighted higher than precision.
         """
         # running on entire test data takes a while
-        score = meteor(self.spacy_cv, self.test_data,
-                       self.model, self.cv_criole, self.english, self.device)
+        score = meteor(self.spacy_models[self.source_languague], self.test_data,
+                       self.model, self.source, self.target, self.device)
         print(colored(f"==> Meteor score: {score * 100:.2f}\n", 'blue'))
     
     def calculate_ter_score(self):
@@ -329,32 +360,32 @@ class Sequence_to_Sequence_Transformer:
             measuring the number of edit operations needed to transform the 
             machine-translated output into a human translated reference.
         """
-        score = ter(self.spacy_cv, self.test_data,
-                     self.model, self.cv_criole, self.english, self.device)
+        score = ter(self.spacy_models[self.source_languague], self.test_data,
+                     self.model, self.source, self.target, self.device)
         print(colored(f"==> TER score: {score * 100:.2f}\n", 'blue'))
     
     def count_hyperparameters(self) -> None:
         total_parameters =  sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         print(colored(f'\n==> The model has {total_parameters:,} trainable parameters\n', 'blue'))
 
-    def untokenize_sentence(self, translated_sentence_list) -> str:
+    def untokenize_sentence(self, translated_sentence: list) -> str:
         """
             Method to untokenuze the pedicted translation.
             Returning it on as an str.
         """
-        translated_sentence_str = []
-        for word in translated_sentence_list:
-            if(word != "<eos>" and word != "<unk>"):
-                translated_sentence_str.append(word)
-        translated_sentence = TreebankWordDetokenizer().detokenize(translated_sentence_str)
-        return self.grammar.check_sentence(translated_sentence)
+        translated_sentence = remove_special_notation(translated_sentence)
+        if self.source_languague == "cv":
+            translated_sentence = TreebankWordDetokenizer().detokenize(translated_sentence)
+            return self.grammar.check_sentence(translated_sentence)
+
+        return " ".join(translated_sentence)
 
     def translate_sentence(self, sentence) -> str:
         """
             Method that performers the translation and return the prediction.
         """
         translated_sentence_list = translate_sentence(
-            self.spacy_cv, self.model, sentence, self.cv_criole, self.english, self.device, max_length=50
+            self.spacy_models[self.source_languague], self.model, sentence, self.source, self.target, self.device, max_length=50
         )
         sentence = self.untokenize_sentence(translated_sentence_list)
         return sentence
@@ -368,8 +399,8 @@ class Sequence_to_Sequence_Transformer:
             src, trg = " ".join(
                 data_tuple[0]), " ".join(data_tuple[1])
             translation = self.translate_sentence(src)
-            print(f'  Source (cv): {src}')
-            print(colored(f'  Target (en): {trg}', attrs=['bold']))
+            print(f'  Source ({self.source_languague}): {src}')
+            print(colored(f'  Target ({self.target_languague}): {trg}', attrs=['bold']))
             print(
-                colored(f'  Predicted (en): {translation}\n', 'blue', attrs=['bold'])
+                colored(f'  Predicted ({self.target_languague}): {translation}\n', 'blue', attrs=['bold'])
             )
