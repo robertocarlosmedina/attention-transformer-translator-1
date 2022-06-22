@@ -1,5 +1,5 @@
 import argparse
-import os
+from termcolor import colored
 
 
 arg_pr = argparse.ArgumentParser()
@@ -30,6 +30,13 @@ arg_pr.add_argument(
 )
 
 args = vars(arg_pr.parse_args())
+
+
+if args["source"] == args["target"]:
+    print(
+        colored("Error: Source languague and Target languague should not be the same.", "red", attrs=["bold"])
+    )
+    exit(1)
 
 
 from src.seq_to_seq_transformer import Sequence_to_Sequence_Transformer as seq_to_seq_trans

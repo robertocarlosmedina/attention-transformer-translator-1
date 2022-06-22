@@ -30,7 +30,7 @@ class Sequence_to_Sequence_Transformer:
     }
     grammar = Grammar_checker()
 
-    def __init__(self, source_languague, target_languague) -> None:
+    def __init__(self, source_languague: str, target_languague: str) -> None:
         self.source_languague, self.target_languague = source_languague, target_languague
         print(source_languague, target_languague)
         self.source = Field(tokenize=self.tokenize_src,
@@ -136,7 +136,7 @@ class Sequence_to_Sequence_Transformer:
     def get_test_data(self) -> list:
         return [(test.src, test.trg) for test in self.test_data.examples[0:20]]
 
-    def evaluate(self, epoch, progress_bar):
+    def evaluate(self, epoch: int, progress_bar: object):
         self.model.eval()
 
         epoch_loss = 0
@@ -179,7 +179,7 @@ class Sequence_to_Sequence_Transformer:
 
         return epoch_loss / len_valid_iterator, train_acc / len_valid_iterator
 
-    def train(self, epoch, progress_bar):
+    def train(self, epoch: int, progress_bar: object):
         self.model.eval()
         self.model.train()
 
@@ -380,7 +380,7 @@ class Sequence_to_Sequence_Transformer:
 
         return " ".join(translated_sentence)
 
-    def translate_sentence(self, sentence) -> str:
+    def translate_sentence(self, sentence: str) -> str:
         """
             Method that performers the translation and return the prediction.
         """
