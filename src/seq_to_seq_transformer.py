@@ -56,9 +56,9 @@ class Sequence_to_Sequence_Transformer:
             "cuda" if torch.cuda.is_available() else "cpu")
         self.save_model = True
         # Training hyperparameters
-        self.num_epochs = 50
+        self.num_epochs = 100
         self.learning_rate = 3e-4
-        self.batch_size = 10
+        self.batch_size = 22
         # Model hyperparameters
         self.src_vocab_size = len(self.source.vocab)
         self.trg_vocab_size = len(self.target.vocab)
