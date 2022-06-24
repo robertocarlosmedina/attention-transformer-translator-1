@@ -8,7 +8,8 @@ import os
 from src.grammar_checker import Grammar_checker
 from src.transformer import Transformer
 from src.utils import epoch_time, translate_sentence, bleu, meteor,\
-    save_checkpoint, load_checkpoint, ter, epoch_time, remove_special_notation
+    save_checkpoint, load_checkpoint, ter, epoch_time, remove_special_notation, \
+    check_dataset
 
 import time
 
@@ -32,7 +33,7 @@ class Sequence_to_Sequence_Transformer:
 
     def __init__(self, source_languague: str, target_languague: str) -> None:
         self.source_languague, self.target_languague = source_languague, target_languague
-        print(source_languague, target_languague)
+        check_dataset()
         self.source = Field(tokenize=self.tokenize_src,
                                lower=True, init_token="<sos>", eos_token="<eos>")
 
@@ -42,7 +43,7 @@ class Sequence_to_Sequence_Transformer:
         self.train_data, self.valid_data, self.test_data = Multi30k.splits(
             exts=(f".{self.source_languague}", f".{target_languague}"), 
             fields=(self.source, self.target), test="test", 
-            path=".data/criolSet"
+            path=".data/crioleSet"
         )
 
         # print(self.train_data.examples[122].src, self.train_data.examples[122].trg)
