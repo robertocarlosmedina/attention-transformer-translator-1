@@ -179,7 +179,6 @@ class Sequence_to_Sequence_Transformer:
                     refresh=True)
                 progress_bar.update()
 
-        print("\n\n\n", val_loss, "\n\n\n")
         return sum(val_loss) / len(val_loss), sum(val_acc) / len(val_acc)
 
     def train(self, epoch: int, progress_bar: object):
