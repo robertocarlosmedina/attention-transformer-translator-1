@@ -142,9 +142,8 @@ class Sequence_to_Sequence_Transformer:
     def evaluate(self, epoch: int, progress_bar: object):
         self.model.eval()
 
-        epoch_loss = 0
-        train_acc, correct_train, target_count = 0, 0, 0
-        len_valid_iterator = len(self.valid_iterator)
+        val_loss = []
+        val_acc, correct_train, target_count = [], 0, 0
 
         with torch.no_grad():
 
@@ -171,16 +170,17 @@ class Sequence_to_Sequence_Transformer:
                 _, predicted = torch.max(output.data, 1)
                 target_count += trg.size(0)
                 correct_train += (trg == predicted).sum().item()
-                train_acc += (correct_train) / target_count
+                val_acc.append((correct_train) / target_count)
 
-                epoch_loss += loss.item()
+                val_loss.append(loss.item())
 
                 progress_bar.set_postfix(
-                    epoch=f" {epoch}, val loss= {round(epoch_loss / (i + 1), 4)}, val accu: {train_acc / (i + 1):.4f}", 
+                    epoch=f" {epoch}, val loss= {round(sum(val_loss) / len(val_loss), 4)}, val accu: {sum(val_acc) / len(val_acc):.4f}", 
                     refresh=True)
                 progress_bar.update()
 
-        return epoch_loss / len_valid_iterator, train_acc / len_valid_iterator
+        print("\n\n\n", val_loss, "\n\n\n")
+        return sum(val_loss) / len(val_loss), sum(val_acc) / len(val_acc)
 
     def train(self, epoch: int, progress_bar: object):
         self.model.eval()
@@ -313,7 +313,7 @@ class Sequence_to_Sequence_Transformer:
                 }
                 save_checkpoint(
                     checkpoint, 
-                    f"checkpoints/transformer1-{self.source_languague}-{self.target_languague}.pth.tar"
+                    f"./checkpoints/transformer1-{self.source_languague}-{self.target_languague}.pth.tar"
                 )
             self.show_train_metrics(
                 epoch + 1, f"{epoch_mins}m {epoch_secs}s", train_loss,
