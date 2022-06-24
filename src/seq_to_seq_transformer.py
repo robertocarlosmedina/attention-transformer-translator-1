@@ -125,13 +125,15 @@ class Sequence_to_Sequence_Transformer:
         self.criterion = nn.CrossEntropyLoss(ignore_index=self.pad_idx)
 
         try:
+            path_name = f"./checkpoints/transformer1-{self.source_languague}-{self.target_languague}.pth.tar"
             load_checkpoint(
                 torch.load(
-                    f"checkpoints/transformer1-{self.source_languague}-{self.target_languague}.pth.tar"
+                    path_name,  map_location='cpu'
                 ),
                 self.model, self.optimizer
             )
-        except:
+        except Exception as e:
+            print("\n\n", e, "\n\n")
             print(colored("=> No checkpoint to Load", "red"))
     
     def get_test_data(self) -> list:
