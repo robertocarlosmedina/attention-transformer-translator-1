@@ -56,16 +56,16 @@ class Sequence_to_Sequence_Transformer:
             "cuda" if torch.cuda.is_available() else "cpu")
         self.save_model = True
         # Training hyperparameters
-        self.num_epochs = 150
+        self.num_epochs = 600
         self.learning_rate = 3e-4
-        self.batch_size = 24
+        self.batch_size = 10
         # Model hyperparameters
         self.src_vocab_size = len(self.source.vocab)
         self.trg_vocab_size = len(self.target.vocab)
         self.embedding_size = 512
         self.num_heads = 8
-        self.num_encoder_layers = 3
-        self.num_decoder_layers = 3
+        self.num_encoder_layers = 4
+        self.num_decoder_layers = 4
         self.dropout = 0.1
         self.max_len = 100
         self.forward_expansion = 4
@@ -178,6 +178,7 @@ class Sequence_to_Sequence_Transformer:
                     epoch=f" {epoch}, val loss= {round(sum(val_loss) / len(val_loss), 4)}, val accu: {sum(val_acc) / len(val_acc):.4f}", 
                     refresh=True)
                 progress_bar.update()
+        print("\n")
 
         return sum(val_loss) / len(val_loss), sum(val_acc) / len(val_acc)
 
@@ -229,7 +230,7 @@ class Sequence_to_Sequence_Transformer:
             
         mean_loss = sum(losses) / len(losses)
         self.scheduler.step(mean_loss)
-    
+        print("\n")
         return epoch_loss / len_iterator, train_acc / len_iterator
 
     def show_train_metrics(self, epoch: int, epoch_time: str, train_loss: float, 
